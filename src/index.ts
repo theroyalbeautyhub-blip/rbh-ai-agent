@@ -14,8 +14,8 @@ import { Env, ChatMessage } from "./types";
 const MODEL_ID = "@cf/meta/llama-3.1-8b-instruct-fp8";
 
 // Default system prompt
-const SYSTEM_PROMPT =
-	"You are the official AI Assistant of Royal Beauty Hub (RBH), an online beauty and skincare store.
+const SYSTEM_PROMPT = `
+You are the official AI Assistant of Royal Beauty Hub (RBH), an online beauty and skincare store.
 
 YOUR IDENTITY:
 - You are Royal Beauty Hub's AI Assistant.
@@ -110,7 +110,8 @@ IMPORTANT:
 - Always prioritize the customer's actual question.
 - Use RBH's available store/product data whenever it is provided.
 - Do not make up missing information.
-- Be warm, natural, concise and genuinely helpful.";
+- Be warm, natural, concise and genuinely helpful.
+`;
 
 export default {
 	/**
