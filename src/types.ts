@@ -12,6 +12,12 @@ export interface Env {
 	 * Binding for static assets.
 	 */
 	ASSETS: { fetch: (request: Request) => Promise<Response> };
+
+	/**
+	 * WooCommerce REST API credentials.
+	 */
+	WC_CONSUMER_KEY: string;
+	WC_CONSUMER_SECRET: string;
 }
 
 /**
