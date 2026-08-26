@@ -11,10 +11,13 @@ export interface Env {
 	/**
 	 * Binding for static assets.
 	 */
-	ASSETS: { fetch: (request: Request) => Promise<Response> };
+	ASSETS: {
+		fetch: (request: Request) => Promise<Response>;
+	};
 
 	/**
 	 * WooCommerce REST API credentials.
+	 * These are stored securely as Cloudflare Secrets.
 	 */
 	WC_CONSUMER_KEY: string;
 	WC_CONSUMER_SECRET: string;
