@@ -1581,26 +1581,33 @@ STRICT CODE-LEVEL PRODUCT RULES
 		);
 
 		const inputs = {
-  messages: conversationMessages,
-  max_tokens: 1024,
-  stream: false
-};
+			messages: conversationMessages,
+			max_tokens: 1024,
+			stream: true,
+		} satisfies AiTextGenerationInput & {
+			stream: true;
+		};
 
-const result = await env2.AI.run(
-  MODEL_ID,
-  inputs
-);
+		const stream =
+			await env.AI.run<typeof MODEL_ID>(
+				MODEL_ID,
+				inputs,
+			);
 
-return new Response(
-  JSON.stringify(result),
-  {
-    status: 200,
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-cache"
-    }
-  }
-);
+		return new Response(stream, {
+
+			headers: {
+				"content-type":
+					"text/event-stream; charset=utf-8",
+
+				"cache-control":
+					"no-cache",
+
+				connection:
+					"keep-alive",
+			},
+
+		});
 
 	} catch (error) {
 
