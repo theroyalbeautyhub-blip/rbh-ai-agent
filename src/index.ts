@@ -1580,32 +1580,27 @@ STRICT CODE-LEVEL PRODUCT RULES
 			systemMessage,
 		);
 
-		const testInputs = {
-    messages: [
-        {
-            role: "system",
-            content: "You are a helpful assistant."
-        },
-        {
-            role: "user",
-            content: "Say hello in one short sentence."
-        }
-    ],
-    max_tokens: 100,
-    stream: true,
+		const inputs = {
+  messages: conversationMessages,
+  max_tokens: 1024,
+  stream: false
 };
 
-const stream = await env.AI.run(
-    MODEL_ID,
-    testInputs,
+const result = await env2.AI.run(
+  MODEL_ID,
+  inputs
 );
 
-return new Response(stream, {
+return new Response(
+  JSON.stringify(result),
+  {
+    status: 200,
     headers: {
-        "content-type": "text/event-stream; charset=utf-8",
-        "cache-control": "no-cache",
-    },
-});
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-cache"
+    }
+  }
+);
 
 	} catch (error) {
 
