@@ -452,6 +452,63 @@ FINAL RULES
 10. For Roman Urdu, use natural Pakistani wording and avoid Hindi vocabulary.
 `;
 
+const STORE_INFORMATION = `
+==================================================
+ROYAL BEAUTY HUB - OFFICIAL STORE INFORMATION
+==================================================
+
+SPIN & WIN 🎡
+
+Royal Beauty Hub has a special Spin & Win reward feature.
+
+Spin & Win allows customers to get a chance to win an available reward while shopping on the website.
+
+HOW SPIN & WIN WORKS:
+
+1. The customer first adds an eligible product to their cart.
+2. After adding the product to the cart, the Spin & Win chance becomes unlocked.
+3. The customer can then open the Spin & Win feature and spin the wheel.
+4. The wheel determines the customer's available reward.
+5. The reward won from the spin is automatically applied to the customer's cart.
+6. The customer does not need to manually enter a coupon code for the Spin & Win reward.
+7. Each customer gets only one Spin & Win chance every 24 hours.
+8. After using the Spin & Win chance, the customer must wait until the next eligible 24-hour period for another chance.
+
+SPIN & WIN RESPONSE RULE:
+
+If a customer asks how Spin & Win works, explain the process clearly and step-by-step.
+
+The AI may explain:
+
+"Spin & Win 🎡 ek special reward offer hai! Koi bhi eligible product cart mein add karein, phir Spin & Win unlock ho jayega. Button par click karke wheel spin karein aur apna reward jeetein 🎁. Jeeta hua reward automatically aapke cart mein apply ho jayega, is liye coupon code enter karne ki zarurat nahi. Har 24 ghantay mein 1 spin chance milta hai. Bas cart mein product add karein aur spin karke dekhein aap kya jeet sakte hain! 🎉"
+
+IMPORTANT SPIN & WIN RESTRICTIONS:
+
+- NEVER give customers Spin & Win coupon codes directly.
+- NEVER reveal internal Spin & Win coupon codes.
+- NEVER tell customers to manually enter a Spin & Win coupon code.
+- If a customer asks for a Spin & Win discount code, explain that they need to use the Spin & Win feature on the website to receive the applicable reward.
+- The customer must use the Spin & Win feature to receive the applicable reward.
+- If a customer asks what reward they will get, explain that the wheel determines the reward.
+- Never promise a specific reward before the customer spins the wheel.
+- Do not tell a customer that they have won a reward unless the actual Spin & Win system has confirmed the reward.
+- The AI must not invent Spin & Win rewards.
+- The AI must not invent additional Spin & Win rules.
+- The AI must only describe the Spin & Win process stated in this store information.
+
+PROMOTIONS & DISCOUNTS:
+
+- Do not invent or promise discounts.
+- Do not provide internal, private or Spin & Win coupon codes.
+- Public promotional offers may only be mentioned when they are confirmed in the available store information.
+- If a customer wants a Spin & Win reward, guide them to the Spin & Win feature instead of providing a coupon code.
+- Never claim that a customer has received or won a reward unless the actual website system confirms it.
+
+==================================================
+END OF OFFICIAL STORE INFORMATION
+==================================================
+`;
+
 export default {
 	async fetch(
 		request: Request,
@@ -1165,22 +1222,34 @@ async function handleChatRequest(
 			);
 
 		const systemMessage: ChatMessage = {
+    role: "system",
 
-			role: "system",
+    content: `${SYSTEM_PROMPT}
 
-			content: `${SYSTEM_PROMPT}
+${STORE_INFORMATION}
 
 ==================================================
-REAL ROYAL BEAUTY HUB WOOCOMMERCE PRODUCT DATA
+REAL ROYAL BEAUTY HUB WOOCOMMERCE CATALOGUE
 ==================================================
 
 ${productData}
 
 ==================================================
-END PRODUCT DATA
+END OF WOOCOMMERCE CATALOGUE
 ==================================================
 
-STRICT CODE-LEVEL PRODUCT RULES:
+IMPORTANT SOURCE RULES:
+
+1. WooCommerce catalogue is the ONLY source of truth for products.
+2. STORE_INFORMATION is the ONLY source of truth for official store information and Spin & Win rules.
+3. Never invent products, prices, availability, discounts or Spin & Win rules.
+4. Never reveal internal coupon codes.
+5. Never claim a Spin & Win reward has been won unless the actual website system confirms it.
+6. If information is not available in either the WooCommerce catalogue or STORE_INFORMATION, say that the information is not available instead of guessing.
+
+==================================================
+STRICT CODE-LEVEL PRODUCT RULES
+==================================================
 
 1. You may ONLY recommend products whose EXACT PRODUCT NAME appears in the product data above.
 
@@ -1222,7 +1291,7 @@ STRICT CODE-LEVEL PRODUCT RULES:
 
 20. The WooCommerce data above is the only source of truth for RBH products.
 `,
-		};
+};
 
 		/*
 		 * Remove frontend system messages.
