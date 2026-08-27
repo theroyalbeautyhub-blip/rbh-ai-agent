@@ -1,11 +1,33 @@
 /**
- * Royal Beauty Hub AI Assistant
+ * =========================================================
+ * ROYAL BEAUTY HUB AI ASSISTANT
+ * =========================================================
+ *
  * Cloudflare Workers AI + WooCommerce REST API
+ *
+ * ARCHITECTURE:
+ *
+ * 1. Automation First
+ * 2. AI Only When Necessary
+ * 3. WooCommerce Only When Necessary
+ * 4. Short AI Responses
+ *
+ * IMPORTANT:
+ * Original RBH business/product rules are preserved.
+ * Optimization is mainly done at CODE level.
+ * =========================================================
  */
 
 import { Env, ChatMessage } from "./types";
 
 const MODEL_ID = "@cf/meta/llama-3.1-8b-instruct-fp8";
+
+
+/**
+ * =========================================================
+ * ORIGINAL RBH SYSTEM PROMPT
+ * =========================================================
+ */
 
 const SYSTEM_PROMPT = `
 You are the official AI Assistant of Royal Beauty Hub (RBH), an online beauty and skincare store.
@@ -296,6 +318,20 @@ PRODUCT PURCHASE
 - Never claim that you added a product.
 - Tell the customer to use the Add to Cart button on the website.
 - Never claim an action was completed unless the application confirms it.
+
+IMPORTANT WEBSITE CONTEXT:
+
+- The customer is already on the Royal Beauty Hub website when they are chatting with this assistant.
+- NEVER tell the customer to open a browser.
+- NEVER tell the customer to search for Royal Beauty Hub.
+- NEVER tell the customer to open the Royal Beauty Hub website.
+- NEVER give instructions that assume the customer is outside the website.
+- When explaining purchasing, refer directly to the product page, Add to Cart, Buy Now and Checkout.
+- If the customer asks how to buy a product, explain the purchase steps directly from the current website.
+- If Add to Cart is available, the customer can click Add to Cart and then proceed to Checkout.
+- If Buy Now is available on the product page, the customer may use Buy Now for direct purchase.
+- Never claim that you personally clicked Add to Cart, Buy Now or Checkout.
+- Never claim that an order was placed unless the application confirms it.
 
 ==================================================
 ORDERS
@@ -723,6 +759,13 @@ FINAL RULES
 10. For Roman Urdu, use natural Pakistani wording and avoid Hindi vocabulary.
 `;
 
+
+/**
+ * =========================================================
+ * STORE INFORMATION
+ * =========================================================
+ */
+
 const STORE_INFORMATION = `
 ==================================================
 ROYAL BEAUTY HUB - OFFICIAL STORE INFORMATION
@@ -780,70 +823,460 @@ END OF OFFICIAL STORE INFORMATION
 ==================================================
 `;
 
+
+/**
+ * =========================================================
+ * AUTOMATION RESPONSES
+ * =========================================================
+ */
+
+function normalizeText(text: string): string {
+	return text
+		.toLowerCase()
+		.trim()
+		.replace(/[؟?!.,،؛:]+/g, " ")
+		.replace(/\s+/g, " ");
+}
+
+
+function isGreeting(text: string): boolean {
+
+	const value = normalizeText(text);
+
+	return [
+		"hi",
+		"hello",
+		"hey",
+		"hy",
+		"helo",
+		"aoa",
+		"salam",
+		"assalam o alaikum",
+		"assalamualaikum",
+		"asalam o alaikum",
+		"asalamualaikum",
+		"assalam o alikum",
+		"kaise ho",
+		"kese ho",
+		"kaisa ho",
+		"kya haal hai",
+		"kya hal hai",
+		"how are you",
+		"how r u",
+	].includes(value);
+}
+
+
+function isFarewell(text: string): boolean {
+
+	const value = normalizeText(text);
+
+	return [
+		"allah hafiz",
+		"allah hafez",
+		"khuda hafiz",
+		"bye",
+		"goodbye",
+		"see you",
+	].includes(value);
+}
+
+
+function isThanks(text: string): boolean {
+
+	const value = normalizeText(text);
+
+	return [
+		"thanks",
+		"thank you",
+		"thx",
+		"shukriya",
+		"bohat shukriya",
+		"jazakallah",
+		"jazak allah",
+		"jazakallah khair",
+	].includes(value);
+}
+
+
+function isSimpleAcknowledgement(text: string): boolean {
+
+	const value = normalizeText(text);
+
+	return [
+		"ok",
+		"okay",
+		"acha",
+		"achha",
+		"theek",
+		"thik",
+		"theek hai",
+		"thik hai",
+		"ji",
+		"jee",
+		"haan",
+		"han",
+		"yes",
+		"alright",
+	].includes(value);
+}
+
+
+/**
+ * Customer is ALREADY on RBH website.
+ *
+ * Never tell them to open browser or search website.
+ */
+function isPurchaseHelp(text: string): boolean {
+
+	const value = normalizeText(text);
+
+	const purchasePatterns = [
+		"buy",
+		"purchase",
+		"order kaise",
+		"order kese",
+		"order kis tarah",
+		"order karna",
+		"order krna",
+		"khareed",
+		"kharid",
+		"kaise loon",
+		"kaise lu",
+		"kese loon",
+		"kese lu",
+		"kaise khareed",
+		"kaise kharid",
+		"buy kaise",
+		"buy kese",
+		"purchase kaise",
+		"purchase kese",
+		"cart mein kaise",
+		"cart me kaise",
+		"cart mein add",
+		"cart me add",
+		"add to cart kaise",
+		"add to cart kese",
+		"checkout kaise",
+		"checkout kese",
+		"checkout karna",
+		"buy now kaise",
+		"buy now kese",
+	];
+
+	return purchasePatterns.some((pattern) =>
+		value.includes(pattern),
+	);
+}
+
+
+function isSpinAndWinQuestion(text: string): boolean {
+
+	const value = normalizeText(text);
+
+	const spinPatterns = [
+		"spin and win",
+		"spin & win",
+		"spin win",
+		"spin kaise",
+		"spin kese",
+		"spin kaise kare",
+		"spin kese kare",
+		"spin kaise karna",
+		"wheel kaise",
+		"wheel kese",
+		"spin reward",
+		"spin ka reward",
+		"spin and win kaise",
+		"spin and win kese",
+	];
+
+	return spinPatterns.some((pattern) =>
+		value.includes(pattern),
+	);
+}
+
+
+/**
+ * =========================================================
+ * AUTOMATED RESPONSES
+ * =========================================================
+ */
+
+const WEBSITE_PURCHASE_RESPONSE = `
+Ji 😊 Aap isi product page par **Add to Cart** par click karein, phir **Checkout** karke order complete kar dein.
+
+Agar product par **Buy Now** option available ho to us par direct click karke bhi purchase kar sakte hain.
+`.trim();
+
+
+const SPIN_AND_WIN_RESPONSE = `
+Spin & Win 🎡 ke liye pehle eligible product **Add to Cart** karein. Iske baad Spin & Win unlock ho jayega aur aap wheel spin kar sakte hain.
+
+Jo reward wheel par milega woh automatically cart mein apply ho jayega. Har 24 ghantay mein 1 spin chance milta hai.
+`.trim();
+
+
+const GENERAL_WELCOME_RESPONSE = `
+Hello! 😊 Main Royal Beauty Hub (RBH) ka AI Assistant hoon. Main aapko products, skincare, orders aur store se related help kar sakta hoon. Bataiye, main aapki kis cheez mein madad karun?
+`.trim();
+
+
+function getAutomatedResponse(
+	text: string,
+	isFirstUserMessage: boolean,
+): string | null {
+
+	if (isFarewell(text)) {
+
+		return "Allah Hafiz! 😊 Jab bhi Royal Beauty Hub ke products ya orders se related help chahiye ho, main yahin hoon.";
+	}
+
+
+	if (isThanks(text)) {
+
+		return "You're most welcome! 😊";
+	}
+
+
+	if (isPurchaseHelp(text)) {
+
+		return WEBSITE_PURCHASE_RESPONSE;
+	}
+
+
+	if (isSpinAndWinQuestion(text)) {
+
+		return SPIN_AND_WIN_RESPONSE;
+	}
+
+
+	if (isGreeting(text)) {
+
+		if (isFirstUserMessage) {
+
+			return GENERAL_WELCOME_RESPONSE;
+		}
+
+		const value =
+			normalizeText(text);
+
+		if (
+			value === "aoa" ||
+			value.includes("assalam")
+		) {
+
+			return "Wa Alaikum Assalam! 😊 Bataiye, main aapki kis cheez mein madad karun?";
+		}
+
+		return "Hello! 😊 Bataiye, main aapki kis cheez mein madad karun?";
+	}
+
+
+	if (isSimpleAcknowledgement(text)) {
+
+		return "Ji bilkul 😊";
+	}
+
+
+	return null;
+}
+
+
+/**
+ * =========================================================
+ * AUTOMATED STREAM RESPONSE
+ * =========================================================
+ *
+ * Frontend already expects streaming/SSE from /api/chat.
+ * So automated answers use the same basic SSE structure.
+ */
+
+function createAutomatedStreamResponse(
+	text: string,
+): Response {
+
+	const encoder =
+		new TextEncoder();
+
+	const stream =
+		new ReadableStream({
+			start(controller) {
+
+				const payload = {
+					response: text,
+				};
+
+				controller.enqueue(
+					encoder.encode(
+						`data: ${JSON.stringify(payload)}\n\n`,
+					),
+				);
+
+				controller.enqueue(
+					encoder.encode(
+						"data: [DONE]\n\n",
+					),
+				);
+
+				controller.close();
+			},
+		});
+
+	return new Response(
+		stream,
+		{
+			headers: {
+				"content-type":
+					"text/event-stream; charset=utf-8",
+
+				"cache-control":
+					"no-cache",
+
+				connection:
+					"keep-alive",
+			},
+		},
+	);
+}
+
+
+/**
+ * =========================================================
+ * WORKER FETCH HANDLER
+ * =========================================================
+ */
+
 export default {
+
 	async fetch(
 		request: Request,
 		env: Env,
 		ctx: ExecutionContext,
 	): Promise<Response> {
-		const url = new URL(request.url);
 
-		if (url.pathname === "/" || !url.pathname.startsWith("/api/")) {
-			return env.ASSETS.fetch(request);
+		const url =
+			new URL(request.url);
+
+
+		if (
+			url.pathname === "/" ||
+			!url.pathname.startsWith("/api/")
+		) {
+
+			return env.ASSETS.fetch(
+				request,
+			);
 		}
 
-		if (url.pathname === "/api/chat") {
-			if (request.method === "POST") {
-				return handleChatRequest(request, env);
+
+		if (
+			url.pathname === "/api/chat"
+		) {
+
+			if (
+				request.method === "POST"
+			) {
+
+				return handleChatRequest(
+					request,
+					env,
+				);
 			}
 
-			return new Response("Method not allowed", { status: 405 });
+			return new Response(
+				"Method not allowed",
+				{
+					status: 405,
+				},
+			);
 		}
 
-		return new Response("Not found", { status: 404 });
+
+		return new Response(
+			"Not found",
+			{
+				status: 404,
+			},
+		);
 	},
+
 } satisfies ExportedHandler<Env>;
 
 
 /**
- * Get REAL published products from WooCommerce.
+ * =========================================================
+ * WOOCOMMERCE
+ * =========================================================
  *
- * We retrieve the actual published catalogue first.
- * Product filtering is then performed locally so that
- * "Face Wash" and "Cleanser" are treated separately.
+ * IMPORTANT OPTIMIZATION:
+ * This function is ONLY called after automation has failed.
  */
+
 async function getWooCommerceProducts(
 	env: Env,
 ): Promise<any[]> {
+
 	try {
+
 		const baseUrl =
 			"https://theroyalbeautyhub.com/wp-json/wc/v3/products";
 
+
 		const allProducts: any[] = [];
 
-		for (let page = 1; page <= 5; page++) {
-			const params = new URLSearchParams();
 
-			params.set("status", "publish");
-			params.set("per_page", "100");
-			params.set("page", String(page));
+		for (
+			let page = 1;
+			page <= 5;
+			page++
+		) {
 
-			const auth = btoa(
-				`${env.WC_CONSUMER_KEY}:${env.WC_CONSUMER_SECRET}`,
+			const params =
+				new URLSearchParams();
+
+
+			params.set(
+				"status",
+				"publish",
 			);
 
-			const response = await fetch(
-				`${baseUrl}?${params.toString()}`,
-				{
-					method: "GET",
-					headers: {
-						Authorization: `Basic ${auth}`,
-						Accept: "application/json",
+			params.set(
+				"per_page",
+				"100",
+			);
+
+			params.set(
+				"page",
+				String(page),
+			);
+
+
+			const auth =
+				btoa(
+					`${env.WC_CONSUMER_KEY}:${env.WC_CONSUMER_SECRET}`,
+				);
+
+
+			const response =
+				await fetch(
+					`${baseUrl}?${params.toString()}`,
+					{
+						method: "GET",
+
+						headers: {
+							Authorization:
+								`Basic ${auth}`,
+
+							Accept:
+								"application/json",
+						},
 					},
-				},
-			);
+				);
+
 
 			if (!response.ok) {
+
 				console.error(
 					"WooCommerce API error:",
 					response.status,
@@ -853,26 +1286,43 @@ async function getWooCommerceProducts(
 				return [];
 			}
 
-			const products = (await response.json()) as any[];
+
+			const products =
+				(await response.json()) as any[];
+
 
 			if (!products.length) {
 				break;
 			}
 
-			allProducts.push(...products);
 
-			if (products.length < 100) {
+			allProducts.push(
+				...products,
+			);
+
+
+			if (
+				products.length < 100
+			) {
+
 				break;
 			}
 		}
 
+
 		return Array.from(
 			new Map(
-				allProducts.map((product) => [product.id, product]),
+				allProducts.map(
+					(product) => [
+						product.id,
+						product,
+					],
+				),
 			).values(),
 		);
 
 	} catch (error) {
+
 		console.error(
 			"WooCommerce connection error:",
 			error,
@@ -884,48 +1334,87 @@ async function getWooCommerceProducts(
 
 
 /**
- * Convert a WooCommerce product into clean AI-readable data.
+ * =========================================================
+ * FORMAT PRODUCT
+ * =========================================================
  */
-function formatProduct(product: any): string {
+
+function formatProduct(
+	product: any,
+): string {
 
 	const description =
 		product.short_description ||
 		product.description ||
 		"";
 
-	const cleanDescription = description
-		.replace(/<[^>]*>/g, " ")
-		.replace(/\s+/g, " ")
-		.trim()
-		.slice(0, 700);
+
+	const cleanDescription =
+		description
+			.replace(
+				/<[^>]*>/g,
+				" ",
+			)
+			.replace(
+				/\s+/g,
+				" ",
+			)
+			.trim()
+			.slice(
+				0,
+				700,
+			);
+
 
 	const categories =
-		Array.isArray(product.categories)
+		Array.isArray(
+			product.categories,
+		)
 			? product.categories
-					.map((category: any) => category.name)
+					.map(
+						(category: any) =>
+							category.name,
+					)
 					.join(", ")
 			: "";
+
 
 	const tags =
-		Array.isArray(product.tags)
+		Array.isArray(
+			product.tags,
+		)
 			? product.tags
-					.map((tag: any) => tag.name)
+					.map(
+						(tag: any) =>
+							tag.name,
+					)
 					.join(", ")
 			: "";
 
-	const attributes =
-		Array.isArray(product.attributes)
-			? product.attributes
-					.map((attribute: any) => {
-						const options =
-							Array.isArray(attribute.options)
-								? attribute.options.join(", ")
-								: "";
 
-						return `${attribute.name}: ${options}`;
-					})
+	const attributes =
+		Array.isArray(
+			product.attributes,
+		)
+			? product.attributes
+					.map(
+						(attribute: any) => {
+
+							const options =
+								Array.isArray(
+									attribute.options,
+								)
+									? attribute.options.join(
+											", ",
+										)
+									: "";
+
+							return `${attribute.name}: ${options}`;
+						},
+					)
 					.join(" | ")
 			: "";
+
 
 	return `
 PRODUCT ID: ${product.id}
@@ -944,91 +1433,140 @@ PRODUCT URL: ${product.permalink || "Not available"}
 
 
 /**
- * Detect the customer's requested product type.
- *
- * IMPORTANT:
- * Face Wash and Cleanser are intentionally separate.
+ * =========================================================
+ * PRODUCT TYPE DETECTION
+ * =========================================================
  */
-function detectProductType(text: string): "facewash" | "cleanser" | "both" | "none" {
 
-	const value = text.toLowerCase();
+function detectProductType(
+	text: string,
+): "facewash" | "cleanser" | "both" | "none" {
+
+	const value =
+		text.toLowerCase();
+
 
 	const faceWash =
-		/\b(face\s*wash|facewash|facial\s*wash)\b/i.test(value);
+		/\b(face\s*wash|facewash|facial\s*wash)\b/i.test(
+			value,
+		);
+
 
 	const cleanser =
-		/\b(cleanser|cleansing|facial\s*cleanser)\b/i.test(value);
+		/\b(cleanser|cleansing|facial\s*cleanser)\b/i.test(
+			value,
+		);
 
-	if (faceWash && cleanser) {
+
+	if (
+		faceWash &&
+		cleanser
+	) {
+
 		return "both";
 	}
+
 
 	if (faceWash) {
 		return "facewash";
 	}
 
+
 	if (cleanser) {
 		return "cleanser";
 	}
+
 
 	return "none";
 }
 
 
 /**
- * Detect explicit customer preference.
+ * =========================================================
+ * STRICT PRODUCT PREFERENCE
+ * =========================================================
  */
+
 function detectStrictPreference(
 	text: string,
 ): "facewash" | "cleanser" | "none" {
 
-	const value = text.toLowerCase();
+	const value =
+		text.toLowerCase();
+
 
 	const faceWashOnly =
 		(
-			/\b(face\s*wash|facewash)\b/i.test(value) &&
+			/\b(face\s*wash|facewash)\b/i.test(
+				value,
+			) &&
 			(
-				/\b(sirf|only|just)\b/i.test(value) ||
-				/\b(cleanser\s*(nahi|nahin|na))\b/i.test(value) ||
-				/\b(cleanser\s* nahi\s*chahiye)\b/i.test(value)
+				/\b(sirf|only|just)\b/i.test(
+					value,
+				) ||
+				/\b(cleanser\s*(nahi|nahin|na))\b/i.test(
+					value,
+				) ||
+				/\b(cleanser\s* nahi\s*chahiye)\b/i.test(
+					value,
+				)
 			)
 		);
 
+
 	const cleanserOnly =
 		(
-			/\b(cleanser)\b/i.test(value) &&
+			/\b(cleanser)\b/i.test(
+				value,
+			) &&
 			(
-				/\b(sirf|only|just)\b/i.test(value) ||
-				/\b(face\s*wash\s*(nahi|nahin|na))\b/i.test(value) ||
-				/\b(face\s*wash\s*nahi\s*chahiye)\b/i.test(value)
+				/\b(sirf|only|just)\b/i.test(
+					value,
+				) ||
+				/\b(face\s*wash\s*(nahi|nahin|na))\b/i.test(
+					value,
+				) ||
+				/\b(face\s*wash\s*nahi\s*chahiye)\b/i.test(
+					value,
+				)
 			)
 		);
+
 
 	if (faceWashOnly) {
 		return "facewash";
 	}
 
+
 	if (cleanserOnly) {
 		return "cleanser";
 	}
+
 
 	return "none";
 }
 
 
 /**
- * Detect skincare concerns.
- *
- * These are only used for product relevance.
- * They do NOT create product facts.
+ * =========================================================
+ * CONCERN DETECTION
+ * =========================================================
  */
-function detectConcerns(text: string): string[] {
 
-	const value = text.toLowerCase();
+function detectConcerns(
+	text: string,
+): string[] {
+
+	const value =
+		text.toLowerCase();
+
 
 	const concerns: string[] = [];
 
-	const concernWords: Record<string, string[]> = {
+
+	const concernWords:
+		Record<string, string[]> = {
+
 		acne: [
 			"acne",
 			"pimples",
@@ -1080,161 +1618,263 @@ function detectConcerns(text: string): string[] {
 		],
 	};
 
-	for (const [concern, words] of Object.entries(concernWords)) {
+
+	for (
+		const [concern, words]
+		of Object.entries(
+			concernWords,
+		)
+	) {
 
 		if (
-			words.some((word) =>
-				value.includes(word),
+			words.some(
+				(word) =>
+					value.includes(
+						word,
+					),
 			)
 		) {
-			concerns.push(concern);
+
+			concerns.push(
+				concern,
+			);
 		}
 	}
+
 
 	return concerns;
 }
 
 
 /**
- * Determine whether a product is actually a Face Wash.
- *
- * We primarily use the exact product name.
- * Categories/tags are used only as supporting information.
- */
-function isFaceWash(product: any): boolean {
+ * =========================================================
+ * FACE WASH DETECTION
+ * ========================================================= */
+
+function isFaceWash(
+	product: any,
+): boolean {
 
 	const name =
-		String(product.name || "").toLowerCase();
+		String(
+			product.name || "",
+		).toLowerCase();
+
 
 	const categories =
-		Array.isArray(product.categories)
+		Array.isArray(
+			product.categories,
+		)
 			? product.categories
-					.map((c: any) =>
-						String(c.name || "").toLowerCase(),
+					.map(
+						(c: any) =>
+							String(
+								c.name || "",
+							).toLowerCase(),
 					)
 					.join(" ")
 			: "";
+
 
 	const tags =
-		Array.isArray(product.tags)
+		Array.isArray(
+			product.tags,
+		)
 			? product.tags
-					.map((t: any) =>
-						String(t.name || "").toLowerCase(),
+					.map(
+						(t: any) =>
+							String(
+								t.name || "",
+							).toLowerCase(),
 					)
 					.join(" ")
 			: "";
 
-	/*
-	 * Exact product naming gets highest priority.
-	 */
+
 	if (
-		name.includes("face wash") ||
-		name.includes("facewash") ||
-		name.includes("facial wash")
+		name.includes(
+			"face wash",
+		) ||
+		name.includes(
+			"facewash",
+		) ||
+		name.includes(
+			"facial wash",
+		)
 	) {
+
 		return true;
 	}
 
-	/*
-	 * Category/tag support.
-	 */
+
 	if (
-		(categories.includes("face wash") ||
-			categories.includes("facewash") ||
-			tags.includes("face wash") ||
-			tags.includes("facewash")) &&
-		!name.includes("cleanser")
+		(
+			categories.includes(
+				"face wash",
+			) ||
+			categories.includes(
+				"facewash",
+			) ||
+			tags.includes(
+				"face wash",
+			) ||
+			tags.includes(
+				"facewash",
+			)
+		) &&
+		!name.includes(
+			"cleanser",
+		)
 	) {
+
 		return true;
 	}
+
 
 	return false;
 }
 
 
 /**
- * Determine whether a product is a Cleanser.
- */
-function isCleanser(product: any): boolean {
+ * =========================================================
+ * CLEANSER DETECTION
+ * ========================================================= */
+
+function isCleanser(
+	product: any,
+): boolean {
 
 	const name =
-		String(product.name || "").toLowerCase();
+		String(
+			product.name || "",
+		).toLowerCase();
+
 
 	const categories =
-		Array.isArray(product.categories)
+		Array.isArray(
+			product.categories,
+		)
 			? product.categories
-					.map((c: any) =>
-						String(c.name || "").toLowerCase(),
+					.map(
+						(c: any) =>
+							String(
+								c.name || "",
+							).toLowerCase(),
 					)
 					.join(" ")
 			: "";
+
 
 	const tags =
-		Array.isArray(product.tags)
+		Array.isArray(
+			product.tags,
+		)
 			? product.tags
-					.map((t: any) =>
-						String(t.name || "").toLowerCase(),
+					.map(
+						(t: any) =>
+							String(
+								t.name || "",
+							).toLowerCase(),
 					)
 					.join(" ")
 			: "";
 
+
 	if (
-		name.includes("cleanser") ||
-		name.includes("cleansing")
+		name.includes(
+			"cleanser",
+		) ||
+		name.includes(
+			"cleansing",
+		)
 	) {
+
 		return true;
 	}
 
+
 	if (
-		(categories.includes("cleanser") ||
-			tags.includes("cleanser")) &&
-		!name.includes("face wash") &&
-		!name.includes("facewash")
+		(
+			categories.includes(
+				"cleanser",
+			) ||
+			tags.includes(
+				"cleanser",
+			)
+		) &&
+		!name.includes(
+			"face wash",
+		) &&
+		!name.includes(
+			"facewash",
+		)
 	) {
+
 		return true;
 	}
+
 
 	return false;
 }
 
 
 /**
- * Check whether a product is relevant to the customer's concerns.
- *
- * This does NOT invent a benefit.
- * It only checks whether the actual WooCommerce text
- * contains concern-related words.
- */
+ * =========================================================
+ * PRODUCT CONCERN SCORE
+ * ========================================================= */
+
 function concernScore(
 	product: any,
 	concerns: string[],
 ): number {
 
-	if (!concerns.length) {
+	if (
+		!concerns.length
+	) {
+
 		return 0;
 	}
 
+
 	const text = [
 		product.name || "",
+
 		product.short_description || "",
+
 		product.description || "",
-		Array.isArray(product.categories)
+
+		Array.isArray(
+			product.categories,
+		)
 			? product.categories
-					.map((c: any) => c.name)
+					.map(
+						(c: any) =>
+							c.name,
+					)
 					.join(" ")
 			: "",
-		Array.isArray(product.tags)
+
+		Array.isArray(
+			product.tags,
+		)
 			? product.tags
-					.map((t: any) => t.name)
+					.map(
+						(t: any) =>
+							t.name,
+					)
 					.join(" ")
 			: "",
 	]
 		.join(" ")
 		.toLowerCase();
 
+
 	let score = 0;
 
-	const keywords: Record<string, string[]> = {
+
+	const keywords:
+		Record<string, string[]> = {
+
 		acne: [
 			"acne",
 			"blemish",
@@ -1278,141 +1918,214 @@ function concernScore(
 		],
 	};
 
-	for (const concern of concerns) {
+
+	for (
+		const concern
+		of concerns
+	) {
 
 		const words =
-			keywords[concern] || [];
+			keywords[
+				concern
+			] || [];
 
-		for (const word of words) {
 
-			if (text.includes(word)) {
+		for (
+			const word
+			of words
+		) {
+
+			if (
+				text.includes(
+					word,
+				)
+			) {
+
 				score += 1;
 			}
 		}
 	}
+
 
 	return score;
 }
 
 
 /**
- * Build the product catalogue that will be sent to the AI.
+ * =========================================================
+ * BUILD RELEVANT PRODUCT DATA
+ * =========================================================
  */
+
 function buildRelevantProductData(
 	products: any[],
 	conversationText: string,
 ): string {
 
 	const productType =
-		detectProductType(conversationText);
+		detectProductType(
+			conversationText,
+		);
+
 
 	const strictPreference =
-		detectStrictPreference(conversationText);
+		detectStrictPreference(
+			conversationText,
+		);
+
 
 	const concerns =
-		detectConcerns(conversationText);
+		detectConcerns(
+			conversationText,
+		);
 
-	let allowedProducts = products;
 
-	/*
-	 * STRICT customer preference ALWAYS wins.
+	let allowedProducts =
+		products;
+
+
+	/**
+	 * STRICT preference first.
 	 */
-	if (strictPreference === "facewash") {
+
+	if (
+		strictPreference ===
+		"facewash"
+	) {
 
 		allowedProducts =
-			products.filter(isFaceWash);
+			products.filter(
+				isFaceWash,
+			);
 
 	}
 
-	else if (strictPreference === "cleanser") {
+	else if (
+		strictPreference ===
+		"cleanser"
+	) {
 
 		allowedProducts =
-			products.filter(isCleanser);
+			products.filter(
+				isCleanser,
+			);
 
 	}
 
-	/*
-	 * Otherwise respect requested product type.
-	 */
-	else if (productType === "facewash") {
+	else if (
+		productType ===
+		"facewash"
+	) {
 
 		allowedProducts =
-			products.filter(isFaceWash);
+			products.filter(
+				isFaceWash,
+			);
 
 	}
 
-	else if (productType === "cleanser") {
+	else if (
+		productType ===
+		"cleanser"
+	) {
 
 		allowedProducts =
-			products.filter(isCleanser);
+			products.filter(
+				isCleanser,
+			);
 
 	}
 
-	else if (productType === "both") {
+	else if (
+		productType ===
+		"both"
+	) {
 
 		allowedProducts =
 			products.filter(
 				(product) =>
-					isFaceWash(product) ||
-					isCleanser(product),
+					isFaceWash(
+						product,
+					) ||
+					isCleanser(
+						product,
+					),
 			);
 	}
 
-	/*
-	 * If the requested type has no products,
-	 * we do NOT silently switch categories.
-	 *
-	 * Instead we provide the AI a small fallback
-	 * catalogue so it can honestly explain that
-	 * the requested type is unavailable.
-	 */
-	if (!allowedProducts.length) {
 
-		allowedProducts = products;
+	/**
+	 * If requested category is unavailable,
+	 * provide fallback catalogue so AI can explain honestly.
+	 */
+
+	if (
+		!allowedProducts.length
+	) {
+
+		allowedProducts =
+			products;
 	}
 
-	/*
-	 * Score products according to actual WooCommerce text.
+
+	/**
+	 * Score according to actual WooCommerce text.
 	 */
+
 	const scoredProducts =
-		allowedProducts.map((product) => ({
-			product,
-			score: concernScore(
+		allowedProducts.map(
+			(product) => ({
 				product,
-				concerns,
-			),
-		}));
+
+				score:
+					concernScore(
+						product,
+						concerns,
+					),
+			}),
+		);
+
 
 	scoredProducts.sort(
-		(a, b) => b.score - a.score,
+		(a, b) =>
+			b.score -
+			a.score,
 	);
 
-	/*
-	 * Keep the catalogue manageable.
-	 *
-	 * If there is an explicit product type,
-	 * show the most relevant products first.
+
+	/**
+	 * Keep catalogue manageable.
 	 */
+
 	const limitedProducts =
 		scoredProducts
 			.slice(
 				0,
-				productType === "none" &&
-				strictPreference === "none"
-					? 40
-					: 20,
+				productType ===
+					"none" &&
+				strictPreference ===
+					"none"
+					? 30
+					: 15,
 			)
 			.map(
 				(item) =>
 					item.product,
 			);
 
-	if (!limitedProducts.length) {
+
+	if (
+		!limitedProducts.length
+	) {
+
 		return "No matching WooCommerce products were found.";
 	}
 
+
 	return limitedProducts
-		.map(formatProduct)
+		.map(
+			formatProduct,
+		)
 		.join(
 			"\n==============================\n",
 		);
@@ -1420,8 +2133,11 @@ function buildRelevantProductData(
 
 
 /**
- * Handles chat API requests.
+ * =========================================================
+ * MAIN CHAT HANDLER
+ * =========================================================
  */
+
 async function handleChatRequest(
 	request: Request,
 	env: Env,
@@ -1429,26 +2145,26 @@ async function handleChatRequest(
 
 	try {
 
-		const { messages = [] } =
+		const {
+			messages = [],
+		} =
 			(await request.json()) as {
 				messages: ChatMessage[];
 			};
 
-		/*
-		 * Get the REAL WooCommerce catalogue.
-		 */
-		const products =
-			await getWooCommerceProducts(env);
 
-		if (!products.length) {
+		if (
+			!messages.length
+		) {
 
 			return new Response(
 				JSON.stringify({
 					error:
-						"WooCommerce product catalogue is currently unavailable.",
+						"No messages provided.",
 				}),
 				{
-					status: 503,
+					status: 400,
+
 					headers: {
 						"content-type":
 							"application/json",
@@ -1457,23 +2173,114 @@ async function handleChatRequest(
 			);
 		}
 
-		/*
-		 * Use recent conversation + latest message.
-		 *
-		 * This helps the filtering understand things like:
-		 *
-		 * Customer:
-		 * "Mujhe acne hai aur face wash chahiye."
-		 *
-		 * Later:
-		 * "Sirf face wash dikhao."
+
+		/**
+		 * =====================================================
+		 * GET LATEST USER MESSAGE
+		 * =====================================================
 		 */
+
+		const userMessages =
+			messages.filter(
+				(message) =>
+					message.role ===
+					"user",
+			);
+
+
+		const latestUserMessage =
+			userMessages[
+				userMessages.length -
+					1
+			]?.content || "";
+
+
+		const isFirstUserMessage =
+			userMessages.length === 1;
+
+
+		/**
+		 * =====================================================
+		 * AUTOMATION FIRST
+		 * =====================================================
+		 *
+		 * IMPORTANT:
+		 *
+		 * No AI.
+		 * No WooCommerce.
+		 * No product catalogue.
+		 *
+		 * for simple/fixed messages.
+		 */
+
+		const automatedResponse =
+			getAutomatedResponse(
+				latestUserMessage,
+				isFirstUserMessage,
+			);
+
+
+		if (
+			automatedResponse
+		) {
+
+			return createAutomatedStreamResponse(
+				automatedResponse,
+			);
+		}
+
+
+		/**
+		 * =====================================================
+		 * AI IS REQUIRED
+		 * =====================================================
+		 *
+		 * Only NOW fetch WooCommerce.
+		 */
+
+		const products =
+			await getWooCommerceProducts(
+				env,
+			);
+
+
+		if (
+			!products.length
+		) {
+
+			return new Response(
+				JSON.stringify({
+					error:
+						"WooCommerce product catalogue is currently unavailable.",
+				}),
+				{
+					status: 503,
+
+					headers: {
+						"content-type":
+							"application/json",
+					},
+				},
+			);
+		}
+
+
+		/**
+		 * =====================================================
+		 * RECENT CONVERSATION
+		 * =====================================================
+		 *
+		 * Keep context limited to recent messages.
+		 */
+
 		const conversationText =
 			messages
 				.filter(
 					(message) =>
-						message.role === "user" ||
-						message.role === "assistant",
+						message.role ===
+							"user" ||
+						message.role ===
+							"assistant",
 				)
 				.slice(-8)
 				.map(
@@ -1482,22 +2289,70 @@ async function handleChatRequest(
 				)
 				.join("\n");
 
-		/*
-		 * Build ONLY the relevant product data
-		 * for the AI.
+
+		/**
+		 * =====================================================
+		 * RELEVANT PRODUCT DATA ONLY
+		 * =====================================================
 		 */
+
 		const productData =
 			buildRelevantProductData(
 				products,
 				conversationText,
 			);
 
-		const systemMessage: ChatMessage = {
-    role: "system",
 
-    content: `${SYSTEM_PROMPT}
+		/**
+		 * =====================================================
+		 * WORKER-CONTROLLED SYSTEM MESSAGE
+		 * =====================================================
+		 */
+
+		const systemMessage:
+			ChatMessage = {
+
+			role: "system",
+
+			content: `${SYSTEM_PROMPT}
 
 ${STORE_INFORMATION}
+
+==================================================
+WEBSITE CONTEXT
+==================================================
+
+The customer is already on the Royal Beauty Hub website.
+
+NEVER tell the customer to:
+- open a browser
+- search Google
+- search for Royal Beauty Hub
+- open the Royal Beauty Hub website
+- visit another website
+
+When explaining how to purchase:
+
+- Tell the customer to use the product page they are already viewing.
+- They can click Add to Cart.
+- Then they can proceed to Checkout.
+- If Buy Now is available, they can use Buy Now for direct purchase.
+- Never claim that you personally performed these actions.
+- Never claim an order was placed unless the application confirms it.
+
+==================================================
+SHORT RESPONSE RULE
+==================================================
+
+- Keep normal customer replies short and easy to read.
+- Prefer 2 to 6 short sentences.
+- Do not give long explanations unless the customer asks for details.
+- Answer the customer's actual question directly.
+- Avoid repeating information already given.
+- Use short paragraphs.
+- Do not turn simple questions into long explanations.
+- If a short answer is sufficient, stop there.
+- Only provide detailed explanations when the customer explicitly asks for more detail.
 
 ==================================================
 REAL ROYAL BEAUTY HUB WOOCOMMERCE CATALOGUE
@@ -1562,52 +2417,85 @@ STRICT CODE-LEVEL PRODUCT RULES
 
 20. The WooCommerce data above is the only source of truth for RBH products.
 `,
-};
+		};
 
-		/*
-		 * Remove frontend system messages.
-		 *
-		 * This ensures the Worker-controlled system
-		 * prompt remains authoritative.
+
+		/**
+		 * =====================================================
+		 * REMOVE FRONTEND SYSTEM MESSAGES
+		 * =====================================================
 		 */
+
 		const conversationMessages =
 			messages.filter(
 				(message) =>
-					message.role !== "system",
+					message.role !==
+					"system",
 			);
+
 
 		conversationMessages.unshift(
 			systemMessage,
 		);
 
+
+		/**
+		 * =====================================================
+		 * AI INPUT
+		 * =====================================================
+		 *
+		 * Reduced max_tokens:
+		 * normal answers stay short.
+		 */
+
 		const inputs = {
-			messages: conversationMessages,
-			max_tokens: 1024,
-			stream: true,
+
+			messages:
+				conversationMessages,
+
+			max_tokens:
+				384,
+
+			stream:
+				true,
+
 		} satisfies AiTextGenerationInput & {
 			stream: true;
 		};
 
+
+		/**
+		 * =====================================================
+		 * CLOUDFLARE WORKERS AI
+		 * =====================================================
+		 */
+
 		const stream =
-			await env.AI.run<typeof MODEL_ID>(
+			await env.AI.run<
+				typeof MODEL_ID
+			>(
 				MODEL_ID,
 				inputs,
 			);
 
-		return new Response(stream, {
 
-			headers: {
-				"content-type":
-					"text/event-stream; charset=utf-8",
+		return new Response(
+			stream,
+			{
+				headers: {
 
-				"cache-control":
-					"no-cache",
+					"content-type":
+						"text/event-stream; charset=utf-8",
 
-				connection:
-					"keep-alive",
+					"cache-control":
+						"no-cache",
+
+					connection:
+						"keep-alive",
+				},
 			},
+		);
 
-		});
 
 	} catch (error) {
 
@@ -1615,6 +2503,7 @@ STRICT CODE-LEVEL PRODUCT RULES
 			"Error processing chat request:",
 			error,
 		);
+
 
 		return new Response(
 			JSON.stringify({
