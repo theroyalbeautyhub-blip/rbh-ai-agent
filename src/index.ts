@@ -55,7 +55,7 @@ interface WooProduct {
    MODEL
    ========================================================= */
 
-const MODEL_ID = "@cf/zai-org/glm-4.7-flash";
+const MODEL_ID = "@cf/meta/llama-3.1-8b-instruct-fp8";
 
 /* =========================================================
    SYSTEM PROMPT
