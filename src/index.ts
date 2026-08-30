@@ -1473,11 +1473,11 @@ FINAL MANDATORY RULES:
 		const inputs = {
 			messages: conversationMessages,
 			max_tokens: MAX_OUTPUT_TOKENS,
-			stream: true,
+			stream: false,
 			temperature: 0.2,
 			top_p: 0.8,
 		} satisfies AiTextGenerationInput & {
-			stream: true;
+			stream: false;
 		};
 
 		const stream =
