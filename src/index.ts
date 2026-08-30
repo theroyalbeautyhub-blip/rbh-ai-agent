@@ -1004,8 +1004,7 @@ async function getWooCommerceProducts(
       }
 
       const products =
-        await response.json()
-          as WooProduct[];
+  (await response.json()) as WooProduct[];
 
       if (
         !Array.isArray(products) ||
