@@ -2,7 +2,7 @@
  * =========================================================
  * ROYAL BEAUTY HUB
  * RBH AI ASSISTANT
- * OPTIMIZED CLOUDFLARE WORKER V4
+ * OPTIMIZED CLOUDFLARE WORKER
  * =========================================================
  *
  * OPTIMIZATION:
